@@ -23,7 +23,7 @@ abstract class NoteDao {
     @Delete
     abstract suspend fun deleteANote(note: NoteEntity)
 
-    @Query("SELECT * FROM NOTES_TABLE")
+    @Query("SELECT * FROM NOTES_TABLE ORDER BY id desc")
     abstract fun getAllNotes(): Flow<List<NoteEntity>>
 
 }
