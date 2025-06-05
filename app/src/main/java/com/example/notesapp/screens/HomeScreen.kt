@@ -20,12 +20,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
-import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
@@ -41,7 +40,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,7 +47,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -58,10 +55,30 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
-import com.example.notesapp.AppViewModel
+import com.example.notesapp.viewmodels.AppViewModel
 import com.example.notesapp.R
+import com.example.notesapp.uistates.SearchBarCmp
 import com.example.notesapp.data.NoteEntity
 import com.example.notesapp.navigation.Screens
+import androidx.core.graphics.toColorInt
+
+val darkBackgroundColors = listOf(
+    "#1E1E1E", // Jet Black - minimal, modern
+    "#2C2C54", // Deep Indigo - cool and focused
+    "#3E4A89", // Space Blue - elegant
+    "#1A535C", // Teal Blue - calm and professional
+    "#2E4053", // Charcoal Blue - business-like
+    "#4B4453", // Dark Lavender - creative
+    "#3C3F58", // Slate Purple - subtle depth
+    "#263238", // Blue Grey - clean and modern
+    "#37474F", // Dark Grey Blue - clean tech look
+    "#3A3A3A", // Flat Charcoal - UI-friendly
+    "#424242", // Grey 800 - Google's Material tone
+    "#2D2D2D", // Almost Black - minimalist
+    "#232931", // Deep Slate - modern dashboards
+    "#1F2937", // Tailwind Slate-800 - modern UI feel
+    "#2B2D42"  // Deep Night Blue - serious tone
+)
 
 @Composable
 fun HomeScreen(
@@ -72,14 +89,10 @@ fun HomeScreen(
     val notesList = viewModel.getAllNotes.collectAsStateWithLifecycle(emptyList())
 
 
-//    val dialogBoxState=viewModel.uiStateForDialog.collectAsStateWithLifecycle()
-
-//    For star the fav
-    
     val showAlertDialogBox = remember {
         mutableStateOf(false)
     }
-    
+
 //    entering password to unlock the note
     val showAlertForPassword = remember {
         mutableStateOf(false)
@@ -96,6 +109,10 @@ fun HomeScreen(
         mutableStateOf<NoteEntity?>(null)
     }
 
+    val isSearchExpanded = remember {
+        mutableStateOf(false)
+    }
+
 
     val noteForSettingPassword = remember {
         mutableStateOf<NoteEntity?>(null)
@@ -106,8 +123,8 @@ fun HomeScreen(
 
     val password = viewModel.passwordInAlert.collectAsState()
 
+    val searchBarValue = viewModel.searchBarValue.collectAsStateWithLifecycle()
 
-    
     val setPasswordValue = viewModel.setPasswordDialogValue.collectAsState()
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -143,56 +160,30 @@ fun HomeScreen(
         ) {
 
             IntroCmp()
-            SearchBarCmp(query = "", onValueChange = {})
+            SearchBarCmp(
+                query = searchBarValue.value,
+                onValueChange = { viewModel.updateSearchBarValue(it) },
+                isSearchBarExpanded = isSearchExpanded.value,
+                updateSearchBarState = { isSearchExpanded.value = it },
+                notes = notesList.value.filter {
+                    (it.password == null || viewModel.isNoteUnlocked(it.id)) &&
+                            (it.title.contains(searchBarValue.value, ignoreCase = true) ||
+                                    it.description.contains(
+                                        searchBarValue.value,
+                                        ignoreCase = true
+                                    ))
+                },
+            )
             Spacer(modifier = Modifier.height(8.dp))
-//            NoteCmp(note = NoteEntity(0, "Task Management", "lorem ipsum", false, "28 May", "7:30"))
-//            NoteCmp(
-//                note = NoteEntity(
-//                    0,
-//                    "Task Management",
-//                    "lorem ipsum",
-//                    true,
-//                    "28 May",
-//                    "7:30",
-//                    "nitin"
-//                )
-//            )
-//            NoteCmp(note = NoteEntity(0, "Task Management", "lorem ipsum", false, "28 May", "7:30"))
-//        Lazy Column
+
+
             LazyColumn {
                 items(notesList.value, key = { note -> note.id }) { note ->
                     val isUnlocked =
                         viewModel.unLockedNotes.collectAsState().value.contains(note.id)
-//                     two notes wheather the note is locked or unlocked
-//                    if (isUnlocked) {
-////                        Direct way
-//                        NoteCmp(
-//                            note = note,
-//                            onFavClick = {
-////                            Storing the value of the current note
-//                                selectedNote.value = note
-////                            Updating the alert box
-//                                showAlertDialogBox.value = true
-////                            Log.d("Main", selectedNote.value.toString())
-////                        Alert Dialog box click confirm will update the entry and
-////                        Cancel with do nothing
-//                            },
-//                        )
-//                    } else { //locked
-////                        new composable
-//                        LockedNote(
-//                            note=note,
-//                        ) {
-//                            selectedNoteForPassword.value=note
-//                            showAlertForPassword.value=true
-//                        }
-//                    }
                     NoteItem(
                         note = note,
                         isUnlocked = isUnlocked,
-//                        onSetPasswordValueChange = {
-//                            viewModel.updateSetPasswordDialogValue(it)
-//                        },
                         onFavClick = {
                             selectedNote.value = note
                             showAlertDialogBox.value = true
@@ -202,9 +193,16 @@ fun HomeScreen(
                             showAlertForPassword.value = true
                         },
                         onLockClick = { viewModel.lockNote(note.id) },
-//                        setPasswordValue = setPasswordValue,
                         setPasswordDialog = setPasswordDialog,
-                        storeNoteForPassSet = noteForSettingPassword
+                        storeNoteForPassSet = noteForSettingPassword,
+                        onEditButtonClick = {
+                            navController.navigate(Screens.UpdateNoteScreen.withId(note.id))
+
+
+                        },
+                        onViewClick = {
+                            navController.navigate(Screens.ViewNote.withId(note.id))
+                        }
                     )
 
 
@@ -221,12 +219,6 @@ fun HomeScreen(
                     onConfirm = {
 //                        Check for the password
                         if (selectedNoteForPassword.value!!.password == password.value) {
-//                            selectedNoteForPassword.value= selectedNoteForPassword.value!!.copy(
-//                                password=null
-//                            )
-//                            we will not update the db
-//                            viewModel.updateAWish(selectedNoteForPassword.value!!)
-//                            Update locally in the viewmodel
                             viewModel.unlockNote(selectedNoteForPassword.value!!.id)
                             showAlertForPassword.value = false
                             Toast.makeText(
@@ -259,7 +251,7 @@ fun HomeScreen(
 //                        Update the note
                         selectedNote.value =
                             selectedNote.value!!.copy(isStarred = !selectedNote.value!!.isStarred)
-                        viewModel.updateAWish(selectedNote.value!!)
+                        viewModel.updateANote(selectedNote.value!!)
 //                        hide the dialog
                         showAlertDialogBox.value = false
                         Log.d("Main", notesList.value.toString())
@@ -284,7 +276,7 @@ fun HomeScreen(
                             noteForSettingPassword.value = noteForSettingPassword.value!!.copy(
                                 password = setPasswordValue.value
                             )
-                            viewModel.updateAWish(noteForSettingPassword.value!!)
+                            viewModel.updateANote(noteForSettingPassword.value!!)
                             setPasswordDialog.value = false
                             Toast.makeText(context, "Password Set", Toast.LENGTH_SHORT).show()
 
@@ -418,20 +410,23 @@ fun NoteItem(
     modifier: Modifier = Modifier,
     note: NoteEntity,
     isUnlocked: Boolean,
-//    onSetPasswordValueChange: (String) -> Unit,
     onFavClick: () -> Unit,
     onUnlockClick: () -> Unit,
     onLockClick: () -> Unit,
-//    setPasswordValue: State<String>,
     setPasswordDialog: MutableState<Boolean>,
     storeNoteForPassSet: MutableState<NoteEntity?>,
-//    updateNote: () -> Unit,
+    onEditButtonClick: (Int) -> Unit,
+    onViewClick: () -> Unit,
 ) {
     val context = LocalContext.current
     // Common card settings for consistency
     val cardShape = RoundedCornerShape(16.dp)
     val cardElevation = 8.dp
     val cardHeight = 180.dp
+    val randomColor = remember(note.id) {
+        val colorIndex = note.id % darkBackgroundColors.size
+        Color(darkBackgroundColors[colorIndex].toColorInt())
+    }
 
     // First determine if we should show content (unlocked or no password)
     val showContent = isUnlocked || note.password == null
@@ -440,7 +435,13 @@ fun NoteItem(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp, horizontal = 4.dp)
-            .height(cardHeight),
+            .height(cardHeight)
+            .clickable(
+                enabled = showContent,
+                onClick = {
+                    onViewClick()
+                }
+            ),
         elevation = CardDefaults.cardElevation(cardElevation),
         shape = cardShape,
         colors = CardDefaults.cardColors(
@@ -449,11 +450,14 @@ fun NoteItem(
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             // Only show content if unlocked or not password-protected
+
+
             if (showContent) {
                 // Content for unlocked notes
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
+                        .background(randomColor)
                         .padding(16.dp)
                 ) {
                     // Header - Date and Favorite Icon
@@ -487,6 +491,7 @@ fun NoteItem(
                         ) {
                             Icon(Icons.Default.LockOpen, "lockOpen")
                         }
+//                        To add or remove favorite
                         IconButton(onClick = onFavClick) {
                             Icon(
                                 imageVector = if (note.isStarred) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
@@ -494,6 +499,15 @@ fun NoteItem(
                                 tint = if (note.isStarred) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+//                        To Edit note
+                        IconButton(
+                            onClick = {
+                                onEditButtonClick(note.id)
+                            }
+                        ) {
+                            Icon(Icons.Default.Edit, "editButton")
+                        }
+
                     }
 
                     // Title
@@ -619,41 +633,7 @@ fun NoteItem(
 }
 
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun AlertDialogCmpFromPassword(
-    pass: String,
-    onValueChange: (String) -> Unit,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
-) {
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-//        icon = {
-//            Icon(
-//                imageVector = if (showAlertForPassword) Icons.Default.FavoriteBorder else Icons.Default.Favorite,
-//                contentDescription = "favIcon"
-//            )
-//        },
-        title = { Text("Enter Password") },
-        text = {
-//            Text(if (isStarred) "Do you want to remove this from favorites?" else "Do you want to add this to favorites?")
-            OutlinedTextField(
-                label = { "Enter password" },
-                value = pass,
-                onValueChange = onValueChange
-            )
-        },
-        confirmButton = {
-            TextButton(onClick = onConfirm) { Text("OK") }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
-        }
-    )
-
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -677,156 +657,6 @@ fun AlertDialogForStarCmp(isStarred: Boolean, onDismiss: () -> Unit, onConfirm: 
             TextButton(onClick = onDismiss) { Text("Cancel") }
         }
     )
-}
-
-@Composable
-fun SearchBarCmp(
-    modifier: Modifier = Modifier,
-    query: String,
-    onValueChange: (String) -> Unit
-) {
-
-    OutlinedTextField(
-        value = query,
-        onValueChange = onValueChange,
-        label = {
-            Text("Search Here")
-        },
-        modifier = Modifier.fillMaxWidth(),
-        leadingIcon = {
-            Icon(Icons.Default.Search, "searchIcon")
-        },
-        shape = RoundedCornerShape(8.dp)
-    )
-
-}
-
-@Composable
-fun NoteCmp(
-    modifier: Modifier = Modifier,
-    note: NoteEntity,
-    onFavClick: () -> Unit,
-) {
-    Box(
-        modifier = Modifier
-            .padding(8.dp)
-            .fillMaxWidth()
-    ) {
-        ElevatedCard(
-            modifier = Modifier.fillMaxWidth(),
-            elevation = CardDefaults.cardElevation(8.dp),
-            shape = RoundedCornerShape(8.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = note.date,
-                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp),
-                        color = Color.Gray
-                    )
-                    IconButton(onClick = onFavClick) {
-                        Icon(
-                            if (note.isStarred) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                            contentDescription = "fav"
-                        )
-                    }
-                }
-
-                Text(
-                    text = note.title,
-                    style = MaterialTheme.typography.titleMedium.copy(fontSize = 20.sp),
-                    modifier = Modifier.padding(top = 4.dp)
-                )
-
-                // Description
-                Text(
-                    text = note.description,
-                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 16.sp),
-                    modifier = Modifier.padding(top = 4.dp),
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                // Time (Aligned to Bottom Right)
-                Text(
-                    text = note.time,
-                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp),
-                    color = Color.Gray,
-                    modifier = Modifier
-                        .align(Alignment.End)
-                        .padding(top = 8.dp)
-                )
-            }
-        }
-
-        //Locked Notes
-    }
-}
-
-
-@Composable
-fun LockedNote(
-    modifier: Modifier = Modifier,
-    note: NoteEntity,
-    onMoreHor: () -> Unit,
-) {
-    Box(
-        modifier = Modifier
-            .padding(8.dp)
-            .fillMaxWidth()
-    ) {
-        ElevatedCard(
-            modifier = Modifier
-                .fillMaxWidth()
-                .graphicsLayer {
-                    alpha = 0.02f  // Semi-transparent for locked notes
-                },
-            elevation = CardDefaults.cardElevation(8.dp),
-            shape = RoundedCornerShape(8.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color.Black.copy(alpha = 0.3f))
-            ) {
-
-                // Lock Icon in Center
-                Icon(
-                    imageVector = Icons.Default.Lock,
-                    contentDescription = "Locked",
-                    tint = Color.White,
-                    modifier = Modifier
-                        .size(48.dp)
-                        .align(Alignment.Center)
-                )
-
-                // More Options Icon (Top Right)
-                IconButton(
-                    onClick = onMoreHor,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(8.dp)
-                ) {
-                    Icon(
-                        Icons.Default.MoreHoriz,
-                        "Options",
-                        tint = Color.White,
-                        modifier = Modifier.size(40.dp)
-                    )
-                }
-
-            }
-
-        }
-    }
 }
 
 
@@ -855,17 +685,6 @@ fun IntroCmp() {
         }
     }
 }
-
-
-//@Preview(showBackground = true)
-//@Composable
-//private fun HomeScreenPreview() {
-//    HomeScreen(
-//        navController = rememberNavController(),
-////        viewModel = viewModel,
-////        viewModel = AppViewModel()
-//    )
-//}
 
 
 

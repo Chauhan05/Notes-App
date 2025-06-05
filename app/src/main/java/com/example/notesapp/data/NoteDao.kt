@@ -26,4 +26,7 @@ abstract class NoteDao {
     @Query("SELECT * FROM NOTES_TABLE ORDER BY id desc")
     abstract fun getAllNotes(): Flow<List<NoteEntity>>
 
+    @Query("SELECT * FROM NOTES_TABLE WHERE id=:id")
+    abstract suspend fun getNoteById(id:Int): NoteEntity
+
 }

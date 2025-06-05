@@ -1,8 +1,9 @@
-package com.example.notesapp
+package com.example.notesapp.viewmodels
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.notesapp.uistates.NoteUiState
 import com.example.notesapp.data.Graph
 import com.example.notesapp.data.NoteEntity
 import com.example.notesapp.data.NoteRepository
@@ -19,8 +20,23 @@ class AppViewModel(
 
     lateinit var getAllNotes: Flow<List<NoteEntity>>
 
+
+
     private val _uiState = MutableStateFlow(NoteUiState())
     val uiState = _uiState.asStateFlow()
+
+    private val _noteById = MutableStateFlow<NoteEntity?>(null)
+    val noteById = _noteById.asStateFlow()
+
+
+    fun getNoteById(id: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val note = noteRepository.getNoteById(id)
+            _noteById.value = note
+        }
+    }
+
+
 
 
 //    private val _uiStateForDialog = MutableStateFlow(UiStatesForDialog())
@@ -47,6 +63,10 @@ class AppViewModel(
 
     private val _isPasswordSwitchEnabled = MutableStateFlow(false)
     val isPasswordSwitchEnabled = _isPasswordSwitchEnabled.asStateFlow()
+
+
+    private val _searchBarValue = MutableStateFlow("")
+    val searchBarValue = _searchBarValue.asStateFlow()
 
 
     private val _passwordInAlert = MutableStateFlow("")
@@ -76,6 +96,10 @@ class AppViewModel(
         _unlockedNotes.update {
             it - noteId
         }
+    }
+
+    fun updateSearchBarValue(newValue: String) {
+        _searchBarValue.value = newValue
     }
 
     //    to check if the lock is unlocked
@@ -109,8 +133,14 @@ class AppViewModel(
         _uiState.value = _uiState.value.copy(password = newValue)
     }
 
-    private fun entryIsValid(): Boolean =
-        _uiState.value.title.isNotBlank() && _uiState.value.description.isNotBlank()
+    private fun entryIsValid(): Boolean {
+        if (_isPasswordSwitchEnabled.value) {
+            return _uiState.value.title.isNotBlank() && _uiState.value.description.isNotBlank() && _uiState.value.password?.isNotBlank() == true
+
+        }
+        return _uiState.value.title.isNotBlank() && _uiState.value.description.isNotBlank()
+
+    }
 
     fun onSaveClick(): String {
         if (entryIsValid()) {
@@ -134,24 +164,30 @@ class AppViewModel(
     }
 
 
-    fun addWish(note: NoteEntity) {
+    fun addANote(note: NoteEntity) {
         viewModelScope.launch(Dispatchers.IO) {
             noteRepository.addANote(note)
         }
     }
 
 
-    fun updateAWish(note: NoteEntity) {
+    fun updateANote(note: NoteEntity) {
         viewModelScope.launch(Dispatchers.IO) {
             noteRepository.updateANote(note)
         }
     }
 
-    fun deleteAWish(note: NoteEntity) {
+    fun deleteANote(note: NoteEntity) {
         viewModelScope.launch(Dispatchers.IO) {
             noteRepository.deleteANote(note)
         }
     }
+
+//    fun getNoteById(id:Int){
+//        viewModelScope.launch(Dispatchers.IO) {
+//            getNoteById=noteRepository.getNoteById(id)
+//        }
+//    }
 
 
 }

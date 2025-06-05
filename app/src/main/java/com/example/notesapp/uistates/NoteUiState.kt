@@ -1,4 +1,4 @@
-package com.example.notesapp
+package com.example.notesapp.uistates
 
 import com.example.notesapp.data.NoteEntity
 import java.time.LocalDateTime

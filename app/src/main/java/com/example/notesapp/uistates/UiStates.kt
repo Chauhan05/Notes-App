@@ -1,4 +1,4 @@
-package com.example.notesapp
+package com.example.notesapp.uistates
 
 data class UiStatesForDialog(
     val alertDialogForPasswordEntry: Boolean = false,
